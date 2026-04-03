@@ -7,4 +7,4 @@ pyserial
 flet
 streamlit
 PyQt5
-customtkinter
+fastapi
