@@ -1,0 +1,12 @@
+supabase
+python-dotenv
+pandas
+numpy
+plotly
+pyserial
+flet
+streamlit
+PyQt5
+fastapi
+uvicorn
+requests
