@@ -63,6 +63,13 @@ class _RealTimeGraphState extends State<RealTimeGraph> {
       final spots = buf.map((p) => FlSpot(p[0], p[1])).toList();
       // ensure spots are ordered by X (timestamp)
       spots.sort((a, b) => a.x.compareTo(b.x));
+      // ensure strictly increasing X values to avoid fl_chart curve artifacts
+      for (int j = 1; j < spots.length; j++) {
+        if (spots[j].x <= spots[j - 1].x) {
+          final newX = spots[j - 1].x + 0.001; // small epsilon (ms-level)
+          spots[j] = FlSpot(newX, spots[j].y);
+        }
+      }
       return spots;
     });
 
@@ -144,8 +151,7 @@ class _RealTimeGraphState extends State<RealTimeGraph> {
         lineBarsData: List.generate(widget.columnIds.length, (i) {
           return LineChartBarData(
             spots: allSpots[i],
-            isCurved: true,
-            curveSmoothness: 0.35,
+            isCurved: false,
             color: widget.colors[i],
             barWidth: 2,
             dotData: const FlDotData(show: false),

@@ -107,7 +107,7 @@ def simulate_and_send():
 
         print(f"{t}s | {phase} | Alt: {altitude:.2f} m")
 
-        time.sleep(0.01)  # Simule un délai de 10ms
+        time.sleep(0.5)  # Simule un délai de 10ms
 
     return data_csv
 
