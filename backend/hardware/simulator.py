@@ -2,6 +2,7 @@ import csv
 import time
 import os
 import random
+import math
 import requests
 from dotenv import load_dotenv
 from supabase import create_client
@@ -30,13 +31,21 @@ def simulate_and_send():
 
     print(f"Montée vers {TARGET_ALTITUDE}m en {ASCENT_DURATION}s")
 
+    # orientation state for smoother realistic behaviour
+    roll = 0.0
+    pitch = 0.0
+    yaw = random.uniform(0, 360)
+    yaw_rate = random.uniform(-2.0, 2.0)
+    maneuver_end = -1
+    maneuver_target_roll = 0.0
+
     for t in range(0, DURATION, TIME_STEP):
 
         # ===== PHASES =====
         if t < ASCENT_DURATION:
             phase = "Montée"
             # progression douce vers 10m
-            altitude += TARGET_ALTITUDE / ASCENT_DURATION + random.uniform(-0.2, 0.2)
+            altitude += TARGET_ALTITUDE / ASCENT_DURATION + random.uniform(-0.2, 0.2) # random.uniform permet d'ajouter un peu de réalisme en simulant des variations naturelles
             vitesse += random.uniform(0.5, 1.0)
 
         elif t < 80:
@@ -61,12 +70,12 @@ def simulate_and_send():
         # ===== ORIENTATION =====
         roll = random.uniform(-5, 5)
         pitch = 5 if phase == "Montée" else -5 if phase == "Descente" else 0
-        yaw = (t * 3) % 360
+        yaw =  (t * 3) % 360
 
         # ===== FORMAT DATA =====
         row = [
             t,
-            round(altitude, 2),
+            round(altitude, 2), #round pour limiter à 2 décimales et rendre les données plus lisibles
             round(vitesse, 2),
             round(ax, 2),
             round(ay, 2),

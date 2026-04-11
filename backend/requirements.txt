@@ -5,8 +5,10 @@ numpy
 plotly
 pyserial
 flet
-streamlit
-PyQt5
 fastapi
 uvicorn
 requests
+pymavlink
+dronekit
+dronekit-sitl
+geopy

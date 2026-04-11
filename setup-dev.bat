@@ -30,7 +30,7 @@ echo.
 
 REM Activate virtual environment and install dependencies
 echo [2/4] Activating virtual environment and installing packages...
-call cd backend
+call cd backend:/
 venv\Scripts\activate.bat
 pip install --upgrade pip
 pip install -r requirements.txt

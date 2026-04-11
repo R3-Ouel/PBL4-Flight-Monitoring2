@@ -17,15 +17,26 @@ class DashboardPage extends StatelessWidget {
         actions: [
           ValueListenableBuilder<bool>(
             valueListenable: isLive,
-            builder: (_, value, _) => Row(
+            builder: (_, value, __) => Row(
               children: [
-                Text(value ? 'LIVE' : 'PAUSED', style: TextStyle(color: value ? Colors.greenAccent : Colors.white24, fontWeight: FontWeight.bold, fontSize: 12)),
+                Icon(Icons.wifi, color: value ? Colors.greenAccent : Colors.white24, size: 18),
+                const SizedBox(width: 8),
+                Text('CONNECTÉ AU DRONE', style: TextStyle(color: value ? Colors.greenAccent : Colors.white24, fontWeight: FontWeight.bold, fontSize: 12)),
+                const SizedBox(width: 8),
                 Switch(
                   value: value,
                   activeColor: Color.fromARGB(255, 200, 230, 201),
                   activeTrackColor: Colors.greenAccent,
                   inactiveThumbColor: Colors.white38,
                   onChanged: (v) => isLive.value = v,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.restart_alt),
+                  color: Colors.white54,
+                  tooltip: 'Reset graphs',
+                  onPressed: () {
+                    resetAllBuffers();
+                  },
                 ),
               ],
             ),

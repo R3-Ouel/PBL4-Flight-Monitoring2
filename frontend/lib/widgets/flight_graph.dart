@@ -15,6 +15,10 @@ class RealTimeGraph extends StatefulWidget {
 
 class _RealTimeGraphState extends State<RealTimeGraph> {
   StreamSubscription<void>? _bufSub;
+  // Keep a growing Y-range cache so the Y-axis doesn't shrink and cause
+  // visual instability when old points are removed or when values fluctuate.
+  double? _minYCache;
+  double? _maxYCache;
 
   @override
   void initState() {
@@ -74,7 +78,12 @@ class _RealTimeGraphState extends State<RealTimeGraph> {
     });
 
     final bool hasData = allSpots.any((s) => s.isNotEmpty);
-    if (!hasData) return const Center(child: CircularProgressIndicator());
+    if (!hasData) {
+      // Reset cached Y-range when no data so next flight starts with fresh autoscale
+      _minYCache = null;
+      _maxYCache = null;
+      return const Center(child: CircularProgressIndicator());
+    }
 
     double minX = double.infinity, maxX = double.negativeInfinity;
     double minY = double.infinity, maxY = double.negativeInfinity;
@@ -100,10 +109,18 @@ class _RealTimeGraphState extends State<RealTimeGraph> {
       maxY = 1;
     }
 
-    final ySpan = (maxY - minY).abs();
+    // Update expanding caches: we only expand the visible Y-range,
+    // never shrink it to avoid jittering axes.
+    if (_minYCache == null || minY < _minYCache!) _minYCache = minY;
+    if (_maxYCache == null || maxY > _maxYCache!) _maxYCache = maxY;
+
+    final usedMinY = _minYCache ?? minY;
+    final usedMaxY = _maxYCache ?? maxY;
+
+    final ySpan = (usedMaxY - usedMinY).abs();
     final pad = ySpan == 0 ? 1.0 : ySpan * 0.12;
-    minY -= pad;
-    maxY += pad;
+    final displayMinY = usedMinY - pad;
+    final displayMaxY = usedMaxY + pad;
 
     // format helper: display elapsed time relative to minX as mm:ss or hh:mm:ss
     String _fmt(double seconds) {
@@ -123,8 +140,8 @@ class _RealTimeGraphState extends State<RealTimeGraph> {
       LineChartData(
         minX: minX,
         maxX: maxX,
-        minY: minY,
-        maxY: maxY,
+        minY: displayMinY,
+        maxY: displayMaxY,
         gridData: FlGridData(
           show: true,
           drawVerticalLine: false,

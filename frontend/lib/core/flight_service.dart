@@ -14,7 +14,9 @@ class FlightService {
   final _controller = StreamController<Map<String, dynamic>>.broadcast();
   final _bufferController = StreamController<void>.broadcast();
   final Map<String, List<List<double>>> _buffers = {};
-  static const int _maxBufferPoints = 600;
+  // Increased to keep more historical points so graphs can display full history
+  // without dropping past data too quickly. Adjust as needed for memory.
+  static const int _maxBufferPoints = 10000;
   WebSocketChannel? _channel;
   bool _disposed = false;
 
@@ -98,9 +100,19 @@ class FlightService {
       } catch (_) {}
     }
   }
+
+  /// Efface tous les buffers internes et notifie les listeners.
+  void resetBuffers() {
+    _buffers.clear();
+    try {
+      _bufferController.add(null);
+    } catch (_) {}
+  }
 }
 
 final FlightService _flightService = FlightService();
 Stream<Map<String, dynamic>> get flightStream => _flightService.stream;
 Stream<void> get bufferStream => _flightService.bufferStream;
 List<List<double>> getBufferForKey(String key) => _flightService.getBufferForKey(key);
+/// Clear all internal buffers (used by UI to reset graphs)
+void resetAllBuffers() => _flightService.resetBuffers();
