@@ -1,0 +1,9 @@
+# This file lists the Python dependencies for the simulators module.
+# python 3.9.7
+
+requests
+pymavlink
+dronekit
+dronekit-sitl
+geopy
+future

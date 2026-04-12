@@ -1,12 +1,11 @@
-from dronekit import connect
-from dronekit_sitl import SITL, LocationGlobalRelative, VehicleMode, mavutil
+from dronekit import connect, LocationGlobalRelative, VehicleMode, mavutil
+from dronekit_sitl import SITL
 from geopy.geocoders import Nominatim
 from geopy.distance import geodesic
 from math import radians, degrees
-from time import sleep
+from time import sleep, time
 import threading
 import requests
-import time as _time
 import sys
 
 
@@ -94,7 +93,7 @@ def start_telemetry_sender(vehicle, endpoint='http://127.0.0.1:8000/push', inter
     def _sender():
         while not stop_event.is_set():
             try:
-                ts_ms = int(_time.time() * 1000)
+                ts_ms = int(time() * 1000)
                 try:
                     alt = float(vehicle.location.global_relative_frame.alt)
                 except Exception:
@@ -202,6 +201,11 @@ def execute_mission(vehicle, points: list, speed: int, home_coords: tuple):
     print("Retour au home")
     try:
         vehicle.mode = forcer_mode(vehicle, 'RTL')
+        dist = geodesic((vehicle.location.global_relative_frame.lat, vehicle.location.global_relative_frame.lon), home_coords).meters
+        while dist > 2:
+            sleep(1)
+            dist = geodesic((vehicle.location.global_relative_frame.lat, vehicle.location.global_relative_frame.lon), home_coords).meters
+            print(f"Distance restante : {dist:.1f} m")
     except Exception:
         pass
 

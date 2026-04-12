@@ -1,14 +1,7 @@
-supabase
+# This file lists the Python dependencies for the backend of the project.
+# python 3.14
+
 python-dotenv
-pandas
-numpy
-plotly
-pyserial
-flet
+supabase
 fastapi
 uvicorn
-requests
-pymavlink
-dronekit
-dronekit-sitl
-geopy

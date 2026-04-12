@@ -41,6 +41,25 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 
+import core.data_ingest as data_ingest
+
+
+@app.on_event("startup")
+async def startup_event():
+    try:
+        data_ingest.start_csv_pusher(interval=5)
+        print("CSV pusher started (interval=5s)")
+    except Exception as e:
+        print("Failed to start CSV pusher:", e)
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    try:
+        data_ingest.stop_csv_pusher()
+    except Exception:
+        pass
+
 @app.websocket("/ws/flight-data")
 async def websocket_endpoint(websocket: WebSocket):
     await manager.connect(websocket)
@@ -57,5 +76,13 @@ async def push(request: Request):
     except Exception:
         return JSONResponse({"ok": False, "error": "invalid json"}, status_code=400)
 
+    # Broadcast to websocket clients
     asyncio.create_task(manager.broadcast(payload))
+
+    # Schedule ingestion (CSV + Supabase) in background thread to avoid blocking
+    try:
+        asyncio.create_task(asyncio.to_thread(data_ingest.process_payload, payload))
+    except Exception as e:
+        print("Failed to schedule ingestion:", e)
+
     return {"ok": True}
