@@ -20,26 +20,53 @@ if errorlevel 1 (
 
 REM Create virtual environment
 echo [1/4] Creating Python virtual environment...
+REM We create the venv inside the `backend` folder so backend scripts use the correct env
+pushd "%~dp0backend" >nul 2>&1 || (
+    echo [ERROR] backend folder not found
+    exit /b 1
+)
 if exist venv (
-    echo Virtual environment already exists, skipping creation
+    echo Virtual environment already exists in backend\venv, skipping creation
 ) else (
     python -m venv venv
-    echo [✓] Virtual environment created
+    if errorlevel 1 (
+        echo [ERROR] Failed to create virtual environment
+        popd >nul 2>&1
+        exit /b 1
+    )
+    echo [✓] Virtual environment created at backend\venv
 )
 echo.
 
 REM Activate virtual environment and install dependencies
-echo [2/4] Activating virtual environment and installing packages...
-call cd backend:/
-venv\Scripts\activate.bat
-pip install --upgrade pip
-pip install -r requirements.txt
+echo [2/4] Activating virtual environment and installing packages in backend\venv...
+call "%CD%\venv\Scripts\activate.bat"
 if errorlevel 1 (
-    echo [ERROR] Failed to install dependencies
+    echo [ERROR] Failed to activate virtual environment
+    popd >nul 2>&1
+    exit /b 1
+)
+
+echo Upgrading pip...
+python -m pip install --upgrade pip setuptools wheel
+if errorlevel 1 (
+    echo [ERROR] Failed to upgrade pip
+    popd >nul 2>&1
+    exit /b 1
+)
+
+echo Installing Python requirements from backend\requirements.txt...
+python -m pip install -r requirements.txt
+if errorlevel 1 (
+    echo [ERROR] Failed to install Python dependencies from requirements.txt
+    popd >nul 2>&1
     pause
     exit /b 1
 )
-echo [✓]  dependencies installed
+
+echo [✓] Python dependencies installed
+popd >nul 2>&1
 echo.
-echo Setup complete! You can now activate the virtual environment using "call venv\Scripts\activate.bat" and run your Python scripts.
+echo Setup complete! Activate backend virtualenv with:
+echo    call backend\venv\Scripts\activate.bat
 pause
