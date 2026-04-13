@@ -85,31 +85,7 @@ def run_simulation():
             "temperature": round(temp, 2),
             "pression": round(1013.25 - (alt * 0.12), 2)
         }
-
-        # Écriture locale CSV (compatibilité)
-        csv_row = {
-            "timestamp": int(time.time()),
-            "altitude": payload["altitude"],
-            "vitesse": payload["vitesse"],
-            "ax": payload["ax"],
-            "ay": payload["ay"],
-            "az": payload["az"],
-            "roll": payload["roll"],
-            "pitch": payload["pitch"],
-            "yaw": payload["yaw"],
-            "temperature": payload["temperature"],
-            "pression": payload["pression"],
-            "latitude": payload["latitude"],
-            "longitude": payload["longitude"],
-            "battery": payload["battery"],
-            "phase": payload["phase"]
-        }
-        try:
-            with open(CSV_FILE, 'a', newline='') as f:
-                csv.DictWriter(f, fieldnames=HEADERS).writerow(csv_row)
-        except Exception as e:
-            print("Erreur écriture CSV:", e)
-
+        
         # Envoi au backend
         try:
             resp = session.post(BACKEND_ENDPOINT, json=payload, timeout=1)
