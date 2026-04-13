@@ -1,8 +1,13 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
 import asyncio
 import json
+import pandas as pd
+from openpyxl import Workbook
+from openpyxl.chart import LineChart, Reference
+import tempfile
+import os
 
 app = FastAPI()
 
@@ -63,6 +68,63 @@ async def shutdown_event():
         csv_manager.stop_csv_pusher()
     except Exception:
         pass
+
+@app.get("/download-excel")
+async def download_excel():
+    # Read the CSV data
+    csv_path = "data/flight_data.csv"
+    df = pd.read_csv(csv_path)
+    
+    # Create workbook
+    wb = Workbook()
+    
+    # Data sheet
+    ws_data = wb.active
+    ws_data.title = "Data"
+    
+    # Write data
+    for r, row in enumerate(df.values.tolist(), 1):
+        for c, val in enumerate(row, 1):
+            ws_data.cell(row=r, column=c, value=val)
+    
+    # Write headers
+    for c, col in enumerate(df.columns, 1):
+        ws_data.cell(row=1, column=c, value=col)
+    
+    # Create chart sheets
+    charts = [
+        ("Altitude", "altitude", 2),
+        ("Vitesse", "vitesse", 3),
+        ("AZ", "az", 6),
+        ("Orientation", "roll,pitch,yaw", [7,8,9]),
+    ]
+    
+    for title, cols, col_indices in charts:
+        ws_chart = wb.create_sheet(title=title)
+        chart = LineChart()
+        chart.title = title
+        chart.x_axis.title = "Timestamp"
+        chart.y_axis.title = "Value"
+        
+        if isinstance(col_indices, list):
+            for idx in col_indices:
+                data = Reference(ws_data, min_col=idx, min_row=2, max_row=len(df)+1)
+                cats = Reference(ws_data, min_col=1, min_row=2, max_row=len(df)+1)
+                chart.add_data(data, titles_from_data=True)
+        else:
+            data = Reference(ws_data, min_col=col_indices, min_row=2, max_row=len(df)+1)
+            cats = Reference(ws_data, min_col=1, min_row=2, max_row=len(df)+1)
+            chart.add_data(data, titles_from_data=True)
+        
+        chart.set_categories(cats)
+        ws_chart.add_chart(chart, "A1")
+    
+    # Save to temp file
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx") as tmp:
+        wb.save(tmp.name)
+        tmp_path = tmp.name
+    
+    return FileResponse(tmp_path, media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', filename='flight_data.xlsx')
 
 @app.websocket("/ws/flight-data")
 async def websocket_endpoint(websocket: WebSocket):
