@@ -109,11 +109,13 @@ async def download_excel():
         
         if isinstance(col_indices, list):
             for idx in col_indices:
-                data = Reference(ws_data, min_col=idx, min_row=2, max_row=len(df)+1)
+                # include header row in the data reference so the header is used
+                # as the series title in the chart
+                data = Reference(ws_data, min_col=idx, min_row=1, max_row=len(df)+1)
                 cats = Reference(ws_data, min_col=1, min_row=2, max_row=len(df)+1)
                 chart.add_data(data, titles_from_data=True)
         else:
-            data = Reference(ws_data, min_col=col_indices, min_row=2, max_row=len(df)+1)
+            data = Reference(ws_data, min_col=col_indices, min_row=1, max_row=len(df)+1)
             cats = Reference(ws_data, min_col=1, min_row=2, max_row=len(df)+1)
             chart.add_data(data, titles_from_data=True)
         

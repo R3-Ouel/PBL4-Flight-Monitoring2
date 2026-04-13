@@ -3,6 +3,7 @@ import csv
 import time
 import re
 import threading
+import shutil
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -133,6 +134,19 @@ def process_payload(payload: dict) -> bool:
         with open(CSV_PATH, "a", newline="") as f:
             writer = csv.writer(f)
             writer.writerow(row)
+
+        # Also copy the updated CSV into the frontend assets so the Flutter app
+        # can access the latest CSV file (useful for desktop/testing workflows).
+        try:
+            repo_root = BASE_DIR.parent
+            frontend_assets = repo_root / "frontend" / "assets"
+            frontend_assets_csv = frontend_assets / "flight_data.csv"
+            frontend_root_csv = repo_root / "frontend" / "flight_data.csv"
+            frontend_assets.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(CSV_PATH, frontend_assets_csv)
+            shutil.copy2(CSV_PATH, frontend_root_csv)
+        except Exception as e:
+            print("Failed to copy CSV to frontend assets:", e)
 
         return True
     except Exception as e:
