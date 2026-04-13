@@ -6,6 +6,7 @@ import json
 import pandas as pd
 from openpyxl import Workbook
 from openpyxl.chart import LineChart, Reference
+import shutil
 import tempfile
 import os
 
@@ -82,14 +83,14 @@ async def download_excel():
     ws_data = wb.active
     ws_data.title = "Data"
     
-    # Write data
-    for r, row in enumerate(df.values.tolist(), 1):
-        for c, val in enumerate(row, 1):
-            ws_data.cell(row=r, column=c, value=val)
-    
-    # Write headers
+    # Write headers (row 1)
     for c, col in enumerate(df.columns, 1):
         ws_data.cell(row=1, column=c, value=col)
+
+    # Write data starting at row 2
+    for r, row in enumerate(df.values.tolist(), start=2):
+        for c, val in enumerate(row, start=1):
+            ws_data.cell(row=r, column=c, value=val)
     
     # Create chart sheets
     charts = [
@@ -123,8 +124,19 @@ async def download_excel():
     with tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx") as tmp:
         wb.save(tmp.name)
         tmp_path = tmp.name
-    
-    return FileResponse(tmp_path, media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', filename='flight_data.xlsx')
+
+    # Try to copy the generated file to the user's Downloads folder (Windows: C:\\Users\\<user>\\Downloads)
+    try:
+        downloads_dir = os.path.join(os.path.expanduser("~"), "Downloads")
+        os.makedirs(downloads_dir, exist_ok=True)
+        dest_path = os.path.join(downloads_dir, "flight_data.xlsx")
+        shutil.copy(tmp_path, dest_path)
+        # serve the copied file so it's also present in Downloads
+        return FileResponse(dest_path, media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', filename='flight_data.xlsx')
+    except Exception as e:
+        # Fallback to serving the temp file if copying failed
+        print("Failed to copy to Downloads:", e)
+        return FileResponse(tmp_path, media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', filename='flight_data.xlsx')
 
 @app.websocket("/ws/flight-data")
 async def websocket_endpoint(websocket: WebSocket):

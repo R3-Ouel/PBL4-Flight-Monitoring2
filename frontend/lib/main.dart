@@ -15,7 +15,9 @@ class _NeonDashboardAppState extends State<NeonDashboardApp> {
 
   void _toggleTheme() {
     setState(() {
-      _themeMode = _themeMode == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark;
+      _themeMode = _themeMode == ThemeMode.dark
+          ? ThemeMode.light
+          : ThemeMode.dark;
     });
   }
 
@@ -25,15 +27,22 @@ class _NeonDashboardAppState extends State<NeonDashboardApp> {
       brightness: Brightness.dark,
       scaffoldBackgroundColor: const Color(0xFF020205),
       colorScheme: const ColorScheme.dark(primary: Colors.redAccent),
-      appBarTheme: const AppBarTheme(backgroundColor: Colors.transparent, elevation: 0),
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+      ),
     );
 
     final lightTheme = ThemeData(
       brightness: Brightness.light,
       // Slightly off-white background to reduce glare in light mode.
       scaffoldBackgroundColor: Colors.grey.shade50,
-      colorScheme: ColorScheme.light(primary: Colors.red.shade700),
-      appBarTheme: const AppBarTheme(backgroundColor: Colors.transparent, elevation: 0),
+      // Use a green-forward primary in light theme
+      colorScheme: ColorScheme.light(primary: Colors.green.shade700),
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+      ),
       // Make cards and surfaces white and use subtle shadows to reduce eye strain
       cardColor: Colors.white,
       canvasColor: Colors.white,
@@ -54,7 +63,10 @@ class _NeonDashboardAppState extends State<NeonDashboardApp> {
         data: _themeMode == ThemeMode.dark ? darkTheme : lightTheme,
         duration: const Duration(milliseconds: 450),
         curve: Curves.easeInOut,
-        child: DashboardPage(onToggleTheme: _toggleTheme, isDark: _themeMode == ThemeMode.dark),
+        child: DashboardPage(
+          onToggleTheme: _toggleTheme,
+          isDark: _themeMode == ThemeMode.dark,
+        ),
       ),
     );
   }

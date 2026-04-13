@@ -232,16 +232,18 @@ class _RealTimeGraphState extends State<RealTimeGraph> {
           ),
         ),
         lineBarsData: List.generate(widget.columnIds.length, (i) {
+          final base = widget.colors[i];
+          final lineColor = isDark ? base : base.withOpacity(0.95);
+          final areaColor = isDark
+              ? base.withOpacity(0.06)
+              : base.withOpacity(0.03);
           return LineChartBarData(
             spots: allSpots[i],
             isCurved: false,
-            color: widget.colors[i],
+            color: lineColor,
             barWidth: 2,
             dotData: const FlDotData(show: false),
-            belowBarData: BarAreaData(
-              show: true,
-              color: widget.colors[i].withOpacity(0.06),
-            ),
+            belowBarData: BarAreaData(show: true, color: areaColor),
           );
         }),
       ),
