@@ -7,7 +7,11 @@ import 'package:frontend/core/flight_service.dart';
 class RealTimeGraph extends StatefulWidget {
   final List<int> columnIds;
   final List<Color> colors;
-  const RealTimeGraph({super.key, required this.columnIds, required this.colors});
+  const RealTimeGraph({
+    super.key,
+    required this.columnIds,
+    required this.colors,
+  });
 
   @override
   State<RealTimeGraph> createState() => _RealTimeGraphState();
@@ -128,13 +132,33 @@ class _RealTimeGraphState extends State<RealTimeGraph> {
       final h = elapsed.inHours;
       final m = elapsed.inMinutes.remainder(60);
       final s = elapsed.inSeconds.remainder(60);
-      if (h > 0) return '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
+      if (h > 0)
+        return '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
       return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
     }
 
     // prepare bottom ticks (min, 1/4, 1/2, 3/4, max) to show readable labels
     final span = maxX - minX;
-    final ticks = <double>[minX, minX + span * 0.25, minX + span * 0.5, minX + span * 0.75, maxX];
+    final ticks = <double>[
+      minX,
+      minX + span * 0.25,
+      minX + span * 0.5,
+      minX + span * 0.75,
+      maxX,
+    ];
+
+    // adapt colors to theme (better visibility in light mode)
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final horizontalGridColor = isDark
+        ? Colors.white.withOpacity(0.06)
+        : Colors.black.withOpacity(0.12);
+    final verticalGridColor = isDark
+        ? Colors.white.withOpacity(0.04)
+        : Colors.black.withOpacity(0.08);
+    final axisTextColor = isDark ? Colors.white70 : Colors.black87;
+    final borderColor = isDark ? Colors.white12 : Colors.black12;
+    final tooltipBg = isDark ? Colors.black87 : Colors.white70;
+    final tooltipTextColor = isDark ? Colors.white : Colors.black;
 
     return LineChart(
       LineChartData(
@@ -145,38 +169,64 @@ class _RealTimeGraphState extends State<RealTimeGraph> {
         gridData: FlGridData(
           show: true,
           drawVerticalLine: true,
-          getDrawingHorizontalLine: (value) => FlLine(color: Colors.white.withOpacity(0.06), strokeWidth: 1),
-          getDrawingVerticalLine: (value) => FlLine(color: Colors.white.withOpacity(0.04), strokeWidth: 1),
+          getDrawingHorizontalLine: (value) =>
+              FlLine(color: horizontalGridColor, strokeWidth: 1),
+          getDrawingVerticalLine: (value) =>
+              FlLine(color: verticalGridColor, strokeWidth: 1),
         ),
         titlesData: FlTitlesData(
           topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
           rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          bottomTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, reservedSize: 36, getTitlesWidget: (value, meta) {
-            // display labels only for prepared ticks (within tolerance)
-            const tol = 0.02; // relative tolerance
-            for (final t in ticks) {
-              if ((value - t).abs() <= (span * tol)) {
-                return Text(_fmt(value), style: const TextStyle(color: Colors.white70, fontSize: 11));
-              }
-            }
-            return const SizedBox.shrink();
-          })),
-          leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, reservedSize: 48, getTitlesWidget: (value, meta) {
-            return Text(value.toStringAsFixed(0), style: const TextStyle(color: Colors.white70, fontSize: 11));
-          })),
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 36,
+              getTitlesWidget: (value, meta) {
+                // display labels only for prepared ticks (within tolerance)
+                const tol = 0.02; // relative tolerance
+                for (final t in ticks) {
+                  if ((value - t).abs() <= (span * tol)) {
+                    return Text(
+                      _fmt(value),
+                      style: TextStyle(color: axisTextColor, fontSize: 11),
+                    );
+                  }
+                }
+                return const SizedBox.shrink();
+              },
+            ),
+          ),
+          leftTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 48,
+              getTitlesWidget: (value, meta) {
+                return Text(
+                  value.toStringAsFixed(0),
+                  style: TextStyle(color: axisTextColor, fontSize: 11),
+                );
+              },
+            ),
+          ),
         ),
-        borderData: FlBorderData(show: true, border: Border.all(color: Colors.white12)),
+        borderData: FlBorderData(
+          show: true,
+          border: Border.all(color: borderColor),
+        ),
         lineTouchData: LineTouchData(
           handleBuiltInTouches: true,
           touchTooltipData: LineTouchTooltipData(
-            tooltipBgColor: Colors.black87,
+            tooltipBgColor: tooltipBg,
             tooltipRoundedRadius: 6,
             getTooltipItems: (touchedSpots) {
               if (touchedSpots.isEmpty) return <LineTooltipItem>[];
               return touchedSpots.map((spot) {
                 final xLabel = _fmt(spot.x);
                 final yLabel = spot.y.toStringAsFixed(2);
-                return LineTooltipItem('$xLabel\n$yLabel', const TextStyle(color: Colors.white, fontSize: 12));
+                return LineTooltipItem(
+                  '$xLabel\n$yLabel',
+                  TextStyle(color: tooltipTextColor, fontSize: 12),
+                );
               }).toList();
             },
           ),
@@ -188,7 +238,10 @@ class _RealTimeGraphState extends State<RealTimeGraph> {
             color: widget.colors[i],
             barWidth: 2,
             dotData: const FlDotData(show: false),
-            belowBarData: BarAreaData(show: true, color: widget.colors[i].withOpacity(0.06)),
+            belowBarData: BarAreaData(
+              show: true,
+              color: widget.colors[i].withOpacity(0.06),
+            ),
           );
         }),
       ),

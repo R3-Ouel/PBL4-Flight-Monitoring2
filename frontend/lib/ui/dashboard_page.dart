@@ -15,7 +15,15 @@ class DashboardPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('FLIGHT CONTROL CENTER', style: TextStyle(color: AppColors.accentRed(context), fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 3)),
+        title: Text(
+          'FLIGHT CONTROL CENTER',
+          style: TextStyle(
+            color: AppColors.accentRed(context),
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 3,
+          ),
+        ),
         backgroundColor: Colors.transparent,
         elevation: 0,
         actions: [
@@ -23,9 +31,24 @@ class DashboardPage extends StatelessWidget {
             valueListenable: isLive,
             builder: (_, value, __) => Row(
               children: [
-                Icon(Icons.wifi, color: value ? AppColors.accentGreen(context) : AppColors.navInactive(context), size: 18),
+                Icon(
+                  Icons.wifi,
+                  color: value
+                      ? AppColors.accentGreen(context)
+                      : AppColors.navInactive(context),
+                  size: 18,
+                ),
                 const SizedBox(width: 8),
-                Text('CONNECTÉ AU DRONE', style: TextStyle(color: value ? AppColors.accentGreen(context) : AppColors.navInactive(context), fontWeight: FontWeight.bold, fontSize: 12)),
+                Text(
+                  'CONNECTÉ AU DRONE',
+                  style: TextStyle(
+                    color: value
+                        ? AppColors.accentGreen(context)
+                        : AppColors.navInactive(context),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
                 const SizedBox(width: 8),
                 Switch(
                   value: value,
@@ -38,10 +61,25 @@ class DashboardPage extends StatelessWidget {
                   IconButton(
                     icon: AnimatedSwitcher(
                       duration: const Duration(milliseconds: 300),
-                      transitionBuilder: (child, anim) => RotationTransition(turns: anim, child: FadeTransition(opacity: anim, child: child)),
-                      child: isDark ? const Icon(Icons.nights_stay, key: ValueKey('dark'), color: Colors.white) : const Icon(Icons.wb_sunny, key: ValueKey('light'), color: Colors.yellowAccent),
+                      transitionBuilder: (child, anim) => RotationTransition(
+                        turns: anim,
+                        child: FadeTransition(opacity: anim, child: child),
+                      ),
+                      child: isDark
+                          ? const Icon(
+                              Icons.nights_stay,
+                              key: ValueKey('dark'),
+                              color: Colors.white,
+                            )
+                          : const Icon(
+                              Icons.wb_sunny,
+                              key: ValueKey('light'),
+                              color: Colors.yellowAccent,
+                            ),
                     ),
-                    tooltip: isDark ? 'Basculer en mode clair' : 'Basculer en mode sombre',
+                    tooltip: isDark
+                        ? 'Basculer en mode clair'
+                        : 'Basculer en mode sombre',
                     onPressed: onToggleTheme,
                   ),
                 IconButton(
@@ -61,7 +99,12 @@ class DashboardPage extends StatelessWidget {
       body: Row(
         children: [
           const NavSidebar(),
-          Container(width: 1, color: Colors.white10),
+          Container(
+            width: 1,
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white10
+                : Colors.black12,
+          ),
           Expanded(
             child: ValueListenableBuilder<int>(
               valueListenable: navMode,
@@ -105,7 +148,9 @@ class NavSidebar extends StatelessWidget {
       valueListenable: navMode,
       builder: (_, mode, __) => Container(
         width: 80,
-        color: const Color(0xFF07070F),
+        color: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF07070F)
+            : AppColors.cardBg(context),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -119,7 +164,14 @@ class NavSidebar extends StatelessWidget {
       ),
     );
   }
-  Widget _btn(BuildContext ctx, IconData icon, String label, int index, int current) {
+
+  Widget _btn(
+    BuildContext ctx,
+    IconData icon,
+    String label,
+    int index,
+    int current,
+  ) {
     final bool active = index == current;
     final accent = AppColors.accentRed(ctx);
     final inactive = AppColors.navInactive(ctx);
@@ -135,7 +187,10 @@ class NavSidebar extends StatelessWidget {
           decoration: BoxDecoration(
             color: active ? accent.withOpacity(0.15) : Colors.transparent,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: active ? accent.withOpacity(0.7) : Colors.transparent, width: 1),
+            border: Border.all(
+              color: active ? accent.withOpacity(0.7) : Colors.transparent,
+              width: 1,
+            ),
           ),
           child: Icon(icon, color: active ? accent : inactive, size: 26),
         ),
