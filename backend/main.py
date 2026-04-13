@@ -41,13 +41,13 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 
-import core.data_ingest as data_ingest
+import backend.core.manager as manager
 
 
 @app.on_event("startup")
 async def startup_event():
     try:
-        data_ingest.start_csv_pusher(interval=5)
+        manager.start_csv_pusher(interval=5)
         print("CSV pusher started (interval=5s)")
     except Exception as e:
         print("Failed to start CSV pusher:", e)
@@ -56,7 +56,7 @@ async def startup_event():
 @app.on_event("shutdown")
 async def shutdown_event():
     try:
-        data_ingest.stop_csv_pusher()
+        manager.stop_csv_pusher()
     except Exception:
         pass
 
@@ -81,7 +81,7 @@ async def push(request: Request):
 
     # Schedule ingestion (CSV + Supabase) in background thread to avoid blocking
     try:
-        asyncio.create_task(asyncio.to_thread(data_ingest.process_payload, payload))
+        asyncio.create_task(asyncio.to_thread(manager.process_payload, payload))
     except Exception as e:
         print("Failed to schedule ingestion:", e)
 

@@ -128,7 +128,11 @@ def start_telemetry_sender(vehicle, endpoint='http://127.0.0.1:8000/push', inter
                     'roll': round(float(roll), 2),
                     'pitch': round(float(pitch), 2),
                     'yaw': round(float(yaw), 2),
-                    'phase': getattr(vehicle.mode, 'name', '') if hasattr(vehicle, 'mode') else ''
+                    'phase': getattr(vehicle.mode, 'name', '') if hasattr(vehicle, 'mode') else '',
+                    # New fields
+                    'latitude': float(getattr(vehicle.location.global_relative_frame, 'lat', 0) or 0),
+                    'longitude': float(getattr(vehicle.location.global_relative_frame, 'lon', 0) or 0),
+                    'battery': float(getattr(vehicle, 'battery', {}).level if getattr(vehicle, 'battery', None) and getattr(vehicle.battery, 'level', None) is not None else 0),
                 }
 
                 try:

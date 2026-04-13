@@ -1,80 +1,131 @@
-import time
-import random
+import time         # Pour le timestamp et les pauses
+import os           # Pour la gestion du fichier CSV
+import csv          # Pour l'écriture locale
+import math         # Pour simuler des courbes fluides (sinus/cosinus)
+import random       # Pour ajouter un peu de "bruit" réaliste aux données
 import requests
 
-# ================= CONFIG =================
-DURATION = 120
-TIME_STEP = 1
-TARGET_ALTITUDE = 10  # altitude cible
-ASCENT_DURATION = random.randint(5, 10)  # montée en 5 à 10 secondes
-
-# Endpoint du backend local (port 8000)
+# --- 1. CONFIGURATION ---
 BACKEND_ENDPOINT = "http://127.0.0.1:8000/push"
 
+# CSV dans le même dossier que ce script
+HERE = os.path.dirname(os.path.abspath(__file__))
+CSV_FILE = os.path.join(HERE, "log_simulation.csv")
+HEADERS = [
+    "timestamp", "altitude", "vitesse", "ax", "ay", "az",
+    "roll", "pitch", "yaw", "temperature", "pression",
+    "latitude", "longitude", "battery", "phase"
+]
 
-# ================= SIMULATION =================
-def simulate_and_send():
-    altitude = 0
-    vitesse = 0
-    flight_id = "VOL_NEON_FUSION_02"
+if not os.path.exists(CSV_FILE):
+    with open(CSV_FILE, 'w', newline='') as f:
+        csv.writer(f).writerow(HEADERS)
 
-    print(f"Montée vers {TARGET_ALTITUDE}m en {ASCENT_DURATION}s")
 
-    roll = 0.0
-    pitch = 0.0
-    yaw = random.uniform(0, 360)
+def run_simulation():
+    print("🎮 Fake simulator démarré — envoi vers backend %s" % BACKEND_ENDPOINT)
 
-    for t in range(0, DURATION, TIME_STEP):
+    start_time = time.time()
+    alt = 0.0
+    vitesse = 0.0
+    batterie = 100.0
+    lat = 48.8584  # Coordonnées de départ (Paris par exemple)
+    lon = 2.2945
+
+    session = requests.Session()
+
+    while True:
+        elapsed = time.time() - start_time
+
         # Phases
-        if t < ASCENT_DURATION:
-            phase = "Montée"
-            altitude += TARGET_ALTITUDE / ASCENT_DURATION + random.uniform(-0.2, 0.2)
-            vitesse += random.uniform(0.5, 1.0)
-        elif t < 80:
-            phase = "Stabilisation"
-            altitude += random.uniform(-0.2, 0.2)
-            vitesse += random.uniform(-0.2, 0.2)
+        if elapsed < 10:
+            phase = "DECOLLAGE"
+            alt += 0.5 + random.uniform(-0.1, 0.1)
+            vitesse = 2.0 + random.uniform(0, 0.5)
+        elif elapsed < 40:
+            phase = "VOL_STABILISE"
+            alt = 15.0 + math.sin(elapsed) * 0.5
+            vitesse = 5.0 + random.uniform(-0.2, 0.2)
+            lon += 0.0001
         else:
-            phase = "Descente"
-            altitude -= random.uniform(0.5, 1.0)
-            vitesse -= random.uniform(0.3, 0.7)
+            phase = "ATTERRISSAGE"
+            alt -= 0.3
+            vitesse = 1.0
+            if alt <= 0:
+                alt = 0
+                phase = "TERMINE"
 
-        altitude = max(0, altitude)
-        vitesse = max(0, vitesse)
+        # Orientation
+        roll = math.sin(elapsed * 0.5) * 5.0
+        pitch = math.cos(elapsed * 0.5) * 3.0
+        yaw = (elapsed * 2) % 360
 
-        ax = random.uniform(-0.5, 0.5)
-        ay = random.uniform(-0.5, 0.5)
-        az = round(9.81 + random.uniform(-0.3, 0.3), 2)
+        # Batterie et températures
+        batterie = max(0.0, batterie - 0.05)
+        temp = 25.0 + (math.sin(elapsed * 0.1) * 2.0)
 
-        roll = random.uniform(-5, 5)
-        pitch = 5 if phase == "Montée" else -5 if phase == "Descente" else 0
-        yaw = (t * 3) % 360
-
+        # Préparer payload conforme au backend
         payload = {
-            "flight_id": flight_id,
-            "timestamp_ms": t * 1000,
-            "altitude": round(altitude, 2),
+            "flight_id": "FAKE_SIM",
+            "timestamp_ms": int(time.time() * 1000),
+            "altitude": round(alt, 2),
             "vitesse": round(vitesse, 2),
-            "ax": round(ax, 2),
-            "ay": round(ay, 2),
-            "az": az,
+            "ax": round(random.uniform(-0.5, 0.5), 3),
+            "ay": round(random.uniform(-0.5, 0.5), 3),
+            "az": round(9.81 + random.uniform(-0.1, 0.1), 3),
             "roll": round(roll, 2),
             "pitch": round(pitch, 2),
             "yaw": round(yaw, 2),
             "phase": phase,
+            # Nouveaux champs demandés
+            "battery": round(batterie, 1),
+            "latitude": round(lat, 6),
+            "longitude": round(lon, 6),
+            # gardons quelques champs utiles
+            "temperature": round(temp, 2),
+            "pression": round(1013.25 - (alt * 0.12), 2)
         }
 
-        # Envoi uniquement vers le backend local (POST /push)
+        # Écriture locale CSV (compatibilité)
+        csv_row = {
+            "timestamp": int(time.time()),
+            "altitude": payload["altitude"],
+            "vitesse": payload["vitesse"],
+            "ax": payload["ax"],
+            "ay": payload["ay"],
+            "az": payload["az"],
+            "roll": payload["roll"],
+            "pitch": payload["pitch"],
+            "yaw": payload["yaw"],
+            "temperature": payload["temperature"],
+            "pression": payload["pression"],
+            "latitude": payload["latitude"],
+            "longitude": payload["longitude"],
+            "battery": payload["battery"],
+            "phase": payload["phase"]
+        }
         try:
-            requests.post(BACKEND_ENDPOINT, json=payload, timeout=0.5)
-        except Exception:
-            # Ne pas bloquer la simulation si le backend n'est pas disponible
-            pass
+            with open(CSV_FILE, 'a', newline='') as f:
+                csv.DictWriter(f, fieldnames=HEADERS).writerow(csv_row)
+        except Exception as e:
+            print("Erreur écriture CSV:", e)
 
-        print(f"{t}s | {phase} | Alt: {altitude:.2f} m")
-        time.sleep(0.5)
+        # Envoi au backend
+        try:
+            resp = session.post(BACKEND_ENDPOINT, json=payload, timeout=1)
+            if resp.status_code != 200:
+                print(f"[WARN] backend returned {resp.status_code}")
+        except Exception as e:
+            # Ne pas planter si backend indisponible
+            print("[WARN] failed to POST to backend:", e)
+
+        # Fréquence d'émission
+        time.sleep(0.2)
+
+        if phase == "TERMINE":
+            print("🏁 Simulation finie.")
+            break
 
 
 if __name__ == "__main__":
-    simulate_and_send()
-    print("Simulation terminée — envoi vers backend uniquement 🚀")
+    run_simulation()

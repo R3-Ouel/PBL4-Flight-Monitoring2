@@ -30,7 +30,21 @@ BASE_DIR = Path(__file__).resolve().parents[1]
 DATA_DIR = BASE_DIR / "data"
 CSV_PATH = DATA_DIR / "flight_data.csv"
 POS_PATH = DATA_DIR / "flight_data.pos"
-CSV_HEADERS = ["timestamp", "altitude", "vitesse", "ax", "ay", "az", "roll", "pitch", "yaw"]
+CSV_HEADERS = [
+    "timestamp",
+    "altitude",
+    "vitesse",
+    "ax",
+    "ay",
+    "az",
+    "roll",
+    "pitch",
+    "yaw",
+    "latitude",
+    "longitude",
+    "battery",
+    "phase",
+]
 
 
 _lock = threading.Lock()
@@ -90,6 +104,10 @@ def process_payload(payload: dict) -> bool:
             payload.get("roll", 0),
             payload.get("pitch", 0),
             payload.get("yaw", 0),
+            payload.get("latitude", 0),
+            payload.get("longitude", 0),
+            payload.get("battery", 0),
+            payload.get("phase", ""),
         ]
 
         with open(CSV_PATH, "a", newline="") as f:
@@ -135,6 +153,9 @@ def _rows_to_payloads(rows):
                 "roll": float(r.get("roll", 0)),
                 "pitch": float(r.get("pitch", 0)),
                 "yaw": float(r.get("yaw", 0)),
+                "latitude": float(r.get("latitude", 0)),
+                "longitude": float(r.get("longitude", 0)),
+                "battery": float(r.get("battery", 0)),
                 "phase": r.get("phase", ""),
             }
             payloads.append(payload)

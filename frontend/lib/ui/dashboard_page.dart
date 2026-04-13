@@ -5,7 +5,10 @@ import 'package:frontend/ui/navigation_view.dart';
 import 'package:frontend/ui/pilotage_view.dart';
 
 class DashboardPage extends StatelessWidget {
-  const DashboardPage({super.key});
+  final VoidCallback? onToggleTheme;
+  final bool isDark;
+
+  const DashboardPage({super.key, this.onToggleTheme, this.isDark = true});
 
   @override
   Widget build(BuildContext context) {
@@ -30,6 +33,16 @@ class DashboardPage extends StatelessWidget {
                   inactiveThumbColor: Colors.white38,
                   onChanged: (v) => isLive.value = v,
                 ),
+                if (onToggleTheme != null)
+                  IconButton(
+                    icon: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 300),
+                      transitionBuilder: (child, anim) => RotationTransition(turns: anim, child: FadeTransition(opacity: anim, child: child)),
+                      child: isDark ? const Icon(Icons.nights_stay, key: ValueKey('dark'), color: Colors.white) : const Icon(Icons.wb_sunny, key: ValueKey('light'), color: Colors.yellowAccent),
+                    ),
+                    tooltip: isDark ? 'Basculer en mode clair' : 'Basculer en mode sombre',
+                    onPressed: onToggleTheme,
+                  ),
                 IconButton(
                   icon: const Icon(Icons.restart_alt),
                   color: Colors.white54,

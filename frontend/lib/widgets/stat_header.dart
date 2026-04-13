@@ -13,7 +13,7 @@ class StatHeader extends StatelessWidget {
         const SizedBox(width: 8),
         _box('TEMP. MOTEURS', 10, '°C', Colors.redAccent),
         const SizedBox(width: 8),
-        _box('PRESSION ATM.', 11, 'hPa', Colors.pinkAccent),
+        _box('BATTERIE', 11, '%', Colors.pinkAccent),
         const SizedBox(width: 8),
         _box('TEMPS DE VOL', 0, '', Colors.greenAccent, isTimestamp: true),
         const SizedBox(width: 8),

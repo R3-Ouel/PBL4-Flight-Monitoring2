@@ -58,6 +58,9 @@ class FlightService {
               'pitch':     (raw['pitch'] ?? 0).toDouble(),
               'yaw':       (raw['yaw'] ?? 0).toDouble(),
               'phase':     raw['phase'] ?? '',
+              'battery':   (raw['battery'] ?? raw['batterie'] ?? 0).toDouble(),
+              'latitude':  (raw['latitude'] ?? 0).toDouble(),
+              'longitude': (raw['longitude'] ?? 0).toDouble(),
             });
           } catch (_) {}
         },
@@ -140,7 +143,7 @@ class DashboardPage extends StatelessWidget {
                 const SizedBox(width: 8),
                 _buildStatBox("TEMP. MOTEURS", 10, "°C", Colors.redAccent),
                 const SizedBox(width: 8),
-                _buildStatBox("PRESSION ATM.", 11, "hPa", Colors.pinkAccent),
+                _buildStatBox("BATTERIE", 11, "%", Colors.pinkAccent),
                 const SizedBox(width: 8),
                 _buildStatBox("TEMPS DE VOL", 0, "", Colors.greenAccent, isTimestamp: true),
                 const SizedBox(width: 8),
@@ -264,6 +267,7 @@ class _RealTimeValueState extends State<RealTimeValue> {
       case 6:  return (data['roll']      as num?)?.toDouble();
       case 7:  return (data['pitch']     as num?)?.toDouble();
       case 8:  return (data['yaw']       as num?)?.toDouble();
+      case 11: return (data['battery']   as num?)?.toDouble();
       default: return null;
     }
   }
