@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:frontend/core/flight_service.dart';
+import 'package:frontend/core/app_colors.dart';
 
 class GpsMapWidget extends StatefulWidget {
   const GpsMapWidget({super.key});
@@ -34,12 +35,18 @@ class _GpsMapWidgetState extends State<GpsMapWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final ctx = context;
+    final accent = AppColors.accentCyan(ctx);
+    final yawColor = AppColors.accentGreen(ctx);
+    final altColor = AppColors.accentCyan(ctx);
+    final phaseColor = AppColors.accentOrange(ctx);
+
     return Stack(
       children: [
-        ClipRRect(borderRadius: BorderRadius.circular(10), child: CustomPaint(painter: _MapPainter(yaw: _yaw), child: const SizedBox.expand())),
-        Positioned(top: 12, left: 12, child: Row(children: [const Icon(Icons.my_location, color: Colors.cyanAccent, size: 13), const SizedBox(width: 6), Text('GPS MAP', style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 11, letterSpacing: 2))])),
-        Positioned(top: 10, right: 12, child: _badge('SIMULÉ', Colors.cyanAccent)),
-        Positioned(bottom: 12, left: 12, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [_infoChip('YAW', '${_yaw.toStringAsFixed(1)}°', Colors.greenAccent), const SizedBox(height: 4), _infoChip('ALT', '${_altitude.toStringAsFixed(1)}m', Colors.cyanAccent), const SizedBox(height: 4), _infoChip('PHASE', _phase, Colors.orangeAccent)])),
+        ClipRRect(borderRadius: BorderRadius.circular(10), child: CustomPaint(painter: _MapPainter(yaw: _yaw, accent: accent), child: SizedBox.expand())),
+        Positioned(top: 12, left: 12, child: Row(children: [Icon(Icons.my_location, color: accent, size: 13), const SizedBox(width: 6), Text('GPS MAP', style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 11, letterSpacing: 2))])),
+        Positioned(top: 10, right: 12, child: _badge('SIMULÉ', accent)),
+        Positioned(bottom: 12, left: 12, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [_infoChip('YAW', '${_yaw.toStringAsFixed(1)}°', yawColor), const SizedBox(height: 4), _infoChip('ALT', '${_altitude.toStringAsFixed(1)}m', altColor), const SizedBox(height: 4), _infoChip('PHASE', _phase, phaseColor)])),
       ],
     );
   }
@@ -51,7 +58,8 @@ class _GpsMapWidgetState extends State<GpsMapWidget> {
 
 class _MapPainter extends CustomPainter {
   final double yaw;
-  const _MapPainter({required this.yaw});
+  final Color accent;
+  const _MapPainter({required this.yaw, required this.accent});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -65,20 +73,20 @@ class _MapPainter extends CustomPainter {
     for (double y = 0; y < size.height; y += 40) {
       canvas.drawLine(Offset(0, y), Offset(size.width, y), g);
     }
-    final circlePaint = Paint()..style = PaintingStyle.stroke..color = Colors.cyanAccent.withOpacity(0.07)..strokeWidth = 1;
+    final circlePaint = Paint()..style = PaintingStyle.stroke..color = accent.withOpacity(0.07)..strokeWidth = 1;
     for (double r = 50; r < math.max(size.width, size.height); r += 60) {
       canvas.drawCircle(Offset(cx, cy), r, circlePaint);
     }
     final cross = Paint()..color = Colors.white.withOpacity(0.08)..strokeWidth = 1;
     canvas.drawLine(Offset(cx, 0), Offset(cx, size.height), cross);
     canvas.drawLine(Offset(0, cy), Offset(size.width, cy), cross);
-    canvas.drawCircle(Offset(cx, cy), 22, Paint()..style = PaintingStyle.stroke..color = Colors.cyanAccent.withOpacity(0.25)..strokeWidth = 1.5);
+    canvas.drawCircle(Offset(cx, cy), 22, Paint()..style = PaintingStyle.stroke..color = accent.withOpacity(0.25)..strokeWidth = 1.5);
     canvas.save();
     canvas.translate(cx, cy);
     canvas.rotate(yaw * math.pi / 180);
     const d = 14.0;
     final path = Path()..moveTo(0, -d)..lineTo(d * 0.6, d * 0.7)..lineTo(-d * 0.6, d * 0.7)..close();
-    canvas.drawPath(path, Paint()..color = Colors.cyanAccent);
+    canvas.drawPath(path, Paint()..color = accent);
     canvas.restore();
   }
 

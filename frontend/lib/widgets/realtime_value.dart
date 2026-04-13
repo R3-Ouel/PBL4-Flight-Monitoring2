@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:frontend/core/flight_service.dart';
+import 'package:frontend/core/app_colors.dart';
 
 class RealTimeValue extends StatefulWidget {
   final int columnId;
@@ -17,13 +18,17 @@ class RealTimeValue extends StatefulWidget {
 class _RealTimeValueState extends State<RealTimeValue> {
   double _lastValue = 0.0;
   String _lastPhase = '--';
+  double? _startTs;
 
   String _formatTs(double s) {
-    final t = s.toInt();
-    final h = t ~/ 3600;
-    final m = (t % 3600) ~/ 60;
-    final sec = t % 60;
-    return '${h.toString().padLeft(2,'0')}:${m.toString().padLeft(2,'0')}:${sec.toString().padLeft(2,'0')}';
+    final start = _startTs ?? s;
+    final elapsedSec = (s - start).round();
+    final elapsed = Duration(seconds: elapsedSec < 0 ? 0 : elapsedSec);
+    final h = elapsed.inHours;
+    final m = elapsed.inMinutes.remainder(60);
+    final sec = elapsed.inSeconds.remainder(60);
+    if (h > 0) return '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}:${sec.toString().padLeft(2, '0')}';
+    return '${m.toString().padLeft(2, '0')}:${sec.toString().padLeft(2, '0')}';
   }
 
   double? _extract(Map<String, dynamic> data) {
@@ -57,7 +62,12 @@ class _RealTimeValueState extends State<RealTimeValue> {
             _lastPhase = (snap.data!['phase'] as String?) ?? _lastPhase;
           } else {
             final v = _extract(snap.data!);
-            if (v != null) _lastValue = v;
+            if (v != null) {
+              if (widget.isTimestamp) {
+                _startTs ??= v;
+              }
+              _lastValue = v;
+            }
           }
         }
 
@@ -76,5 +86,16 @@ class _RealTimeValueState extends State<RealTimeValue> {
     );
   }
 
-  Widget _dot(bool connected) => Container(width: 6, height: 6, decoration: BoxDecoration(shape: BoxShape.circle, color: connected ? Colors.greenAccent : Colors.redAccent, boxShadow: [BoxShadow(color: (connected ? Colors.greenAccent : Colors.redAccent).withOpacity(0.6), blurRadius: 4)]));
+  Widget _dot(bool connected) {
+    final color = connected ? AppColors.accentGreen(context) : AppColors.accentRed(context);
+    return Container(
+      width: 6,
+      height: 6,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: color,
+        boxShadow: [BoxShadow(color: color.withOpacity(0.6), blurRadius: 4)],
+      ),
+    );
+  }
 }

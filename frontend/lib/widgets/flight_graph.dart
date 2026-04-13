@@ -144,27 +144,43 @@ class _RealTimeGraphState extends State<RealTimeGraph> {
         maxY: displayMaxY,
         gridData: FlGridData(
           show: true,
-          drawVerticalLine: false,
-          getDrawingHorizontalLine: (value) => FlLine(color: Colors.white.withOpacity(0.03), strokeWidth: 1),
+          drawVerticalLine: true,
+          getDrawingHorizontalLine: (value) => FlLine(color: Colors.white.withOpacity(0.06), strokeWidth: 1),
+          getDrawingVerticalLine: (value) => FlLine(color: Colors.white.withOpacity(0.04), strokeWidth: 1),
         ),
         titlesData: FlTitlesData(
           topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
           rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          bottomTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, reservedSize: 28, getTitlesWidget: (value, meta) {
+          bottomTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, reservedSize: 36, getTitlesWidget: (value, meta) {
             // display labels only for prepared ticks (within tolerance)
             const tol = 0.02; // relative tolerance
             for (final t in ticks) {
               if ((value - t).abs() <= (span * tol)) {
-                return Text(_fmt(value), style: const TextStyle(color: Colors.white54, fontSize: 10));
+                return Text(_fmt(value), style: const TextStyle(color: Colors.white70, fontSize: 11));
               }
             }
             return const SizedBox.shrink();
           })),
-          leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, reservedSize: 40, getTitlesWidget: (value, meta) {
-            return Text(value.toStringAsFixed(0), style: const TextStyle(color: Colors.white24, fontSize: 10));
+          leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, reservedSize: 48, getTitlesWidget: (value, meta) {
+            return Text(value.toStringAsFixed(0), style: const TextStyle(color: Colors.white70, fontSize: 11));
           })),
         ),
-        borderData: FlBorderData(show: false),
+        borderData: FlBorderData(show: true, border: Border.all(color: Colors.white12)),
+        lineTouchData: LineTouchData(
+          handleBuiltInTouches: true,
+          touchTooltipData: LineTouchTooltipData(
+            tooltipBgColor: Colors.black87,
+            tooltipRoundedRadius: 6,
+            getTooltipItems: (touchedSpots) {
+              if (touchedSpots.isEmpty) return <LineTooltipItem>[];
+              return touchedSpots.map((spot) {
+                final xLabel = _fmt(spot.x);
+                final yLabel = spot.y.toStringAsFixed(2);
+                return LineTooltipItem('$xLabel\n$yLabel', const TextStyle(color: Colors.white, fontSize: 12));
+              }).toList();
+            },
+          ),
+        ),
         lineBarsData: List.generate(widget.columnIds.length, (i) {
           return LineChartBarData(
             spots: allSpots[i],

@@ -30,10 +30,9 @@ class _NeonDashboardAppState extends State<NeonDashboardApp> {
 
     final lightTheme = ThemeData(
       brightness: Brightness.light,
-      // Use a pure white background for the light theme so the whole UI
-      // switches to a white canvas as requested.
-      scaffoldBackgroundColor: Colors.white,
-      colorScheme: const ColorScheme.light(primary: Colors.redAccent),
+      // Slightly off-white background to reduce glare in light mode.
+      scaffoldBackgroundColor: Colors.grey.shade50,
+      colorScheme: ColorScheme.light(primary: Colors.red.shade700),
       appBarTheme: const AppBarTheme(backgroundColor: Colors.transparent, elevation: 0),
       // Make cards and surfaces white and use subtle shadows to reduce eye strain
       cardColor: Colors.white,

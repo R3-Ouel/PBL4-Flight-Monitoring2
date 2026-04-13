@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:frontend/core/app_colors.dart';
 
 class NeonCard extends StatelessWidget {
   final Widget child;
@@ -7,8 +8,8 @@ class NeonCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgColor = isDark ? const Color(0xFF0D0D1A) : Colors.white;
-    final borderColor = isDark ? Colors.white10 : Colors.grey.shade200;
+    final bgColor = AppColors.cardBg(context);
+    final borderColor = isDark ? Colors.white10 : Colors.grey.shade300;
     final boxShadow = isDark
         ? [
             BoxShadow(

@@ -17,16 +17,42 @@ if exist simulators\venv\Scripts\activate.bat (
     echo [WARN] No virtualenv found; using system python
 )
 
+REM Allow selecting which simulator to start: 1=fake, 2=mission planner, 3=both
+set "CHOICE=%~1"
+if "%CHOICE%"=="" (
+    echo.
+    echo Select simulator to start:
+    echo   1) Fake simulator (simulators\fake.py)
+    echo   2) Mission Planner (simulators\mission_planner.py)
+    echo   3) Both
+    set /P CHOICE=Entrez 1,2 ou 3 (q pour quitter): 
+    if "%CHOICE%"=="" (
+        echo Aucun choix fourni. Sortie.
+        goto :end
+    )
+)
+
+if /I "%CHOICE%"=="q" goto :end
+if "%CHOICE%"=="1" goto :start_fake
+if "%CHOICE%"=="2" goto :start_mp
+if "%CHOICE%"=="3" goto :start_both
+if /I "%CHOICE%"=="fake" goto :start_fake
+if /I "%CHOICE%"=="mp" goto :start_mp
+
+echo Choix invalide: %CHOICE%
+goto :end
+
+:start_fake
 echo Starting fake simulator (simulators\fake.py)...
 if exist simulators\fake.py (
     start "FakeSim" cmd /k "python simulators\fake.py"
 ) else (
     echo [WARN] simulators\fake.py not found
 )
+goto :end
 
-timeout /T 2 >nul
-
-REM mission planner may be under simulators/ or backend/drone/
+:start_mp
+echo Starting Mission Planner simulator...
 if exist simulators\mission_planner.py (
     start "MissionPlanner" cmd /k "python simulators\mission_planner.py"
 ) else if exist backend\drone\mission_planner_simulation.py (
@@ -34,5 +60,24 @@ if exist simulators\mission_planner.py (
 ) else (
     echo [WARN] mission planner script not found
 )
+goto :end
+
+:start_both
+echo Starting both simulators...
+if exist simulators\fake.py (
+    start "FakeSim" cmd /k "python simulators\fake.py"
+) else (
+    echo [WARN] simulators\fake.py not found
+)
+timeout /T 2 >nul
+if exist simulators\mission_planner.py (
+    start "MissionPlanner" cmd /k "python simulators\mission_planner.py"
+) else if exist backend\drone\mission_planner_simulation.py (
+    start "MissionPlanner" cmd /k "python backend\drone\mission_planner_simulation.py"
+) else (
+    echo [WARN] mission planner script not found
+)
+
+:end
 
 popd

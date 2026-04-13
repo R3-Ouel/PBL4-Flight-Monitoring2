@@ -155,7 +155,8 @@ def _rows_to_payloads(rows):
                 "yaw": float(r.get("yaw", 0)),
                 "latitude": float(r.get("latitude", 0)),
                 "longitude": float(r.get("longitude", 0)),
-                "batterie": float(r.get("battery", 0)),
+                # Normalize CSV 'battery' column to payload key 'battery'
+                "battery": float(r.get("battery", 0)),
                 "phase": r.get("phase", ""),
             }
             payloads.append(payload)
@@ -171,7 +172,35 @@ def _push_to_supabase(payloads) -> bool:
         BATCH = 100
         for i in range(0, len(payloads), BATCH):
             batch = payloads[i : i + BATCH]
-            supabase.table("telemetrie").insert(batch).execute()
+            # Sanitize types to avoid Postgres type errors (e.g. bigint expecting integer)
+            sanitized = []
+            for item in batch:
+                s = {}
+                # flight_id
+                s["flight_id"] = str(item.get("flight_id") or "CSV_IMPORT")
+                # timestamp_ms -> ensure integer
+                try:
+                    ts_val = item.get("timestamp_ms", 0)
+                    s["timestamp_ms"] = int(float(ts_val))
+                except Exception:
+                    s["timestamp_ms"] = 0
+                # numeric fields (float)
+                for k in ("altitude", "vitesse", "ax", "ay", "az", "roll", "pitch", "yaw", "latitude", "longitude", "battery"):
+                    try:
+                        s[k] = float(item.get(k, 0) or 0)
+                    except Exception:
+                        s[k] = 0.0
+                # phase
+                s["phase"] = str(item.get("phase") or "")
+
+                sanitized.append(s)
+
+            try:
+                supabase.table("telemetrie").insert(sanitized).execute()
+            except Exception as e:
+                # Log sanitized payload for debugging
+                print("Supabase insert failed for batch (sanitized):", sanitized)
+                raise
         return True
     except Exception as e:
         print("Erreur insertion Supabase:", e)
