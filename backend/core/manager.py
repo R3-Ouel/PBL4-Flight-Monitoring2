@@ -155,7 +155,7 @@ def _rows_to_payloads(rows):
                 "yaw": float(r.get("yaw", 0)),
                 "latitude": float(r.get("latitude", 0)),
                 "longitude": float(r.get("longitude", 0)),
-                "battery": float(r.get("battery", 0)),
+                "batterie": float(r.get("battery", 0)),
                 "phase": r.get("phase", ""),
             }
             payloads.append(payload)
