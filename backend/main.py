@@ -39,15 +39,19 @@ class ConnectionManager:
         for c in to_remove:
             self.disconnect(c)
 
-manager = ConnectionManager()
+ws_manager = ConnectionManager()
 
-import backend.core.manager as manager
+# Import the CSV/Supabase manager from the local `core` package. Use a different
+# name to avoid clobbering the websocket `ws_manager` above and to ensure the
+# import works when running from the `backend/` folder (importing `backend.*`
+# would fail when the current working directory is already `backend`).
+import core.manager as csv_manager
 
 
 @app.on_event("startup")
 async def startup_event():
     try:
-        manager.start_csv_pusher(interval=5)
+        csv_manager.start_csv_pusher(interval=5)
         print("CSV pusher started (interval=5s)")
     except Exception as e:
         print("Failed to start CSV pusher:", e)
@@ -56,18 +60,18 @@ async def startup_event():
 @app.on_event("shutdown")
 async def shutdown_event():
     try:
-        manager.stop_csv_pusher()
+        csv_manager.stop_csv_pusher()
     except Exception:
         pass
 
 @app.websocket("/ws/flight-data")
 async def websocket_endpoint(websocket: WebSocket):
-    await manager.connect(websocket)
+    await ws_manager.connect(websocket)
     try:
         while True:
             await websocket.receive_text()  # pour garder la connexion
     except WebSocketDisconnect:
-        manager.disconnect(websocket)
+        ws_manager.disconnect(websocket)
 
 @app.post("/push")
 async def push(request: Request):
@@ -77,11 +81,12 @@ async def push(request: Request):
         return JSONResponse({"ok": False, "error": "invalid json"}, status_code=400)
 
     # Broadcast to websocket clients
-    asyncio.create_task(manager.broadcast(payload))
+    asyncio.create_task(ws_manager.broadcast(payload))
 
     # Schedule ingestion (CSV + Supabase) in background thread to avoid blocking
     try:
-        asyncio.create_task(asyncio.to_thread(manager.process_payload, payload))
+        # Write payload to CSV in a thread to avoid blocking the event loop
+        asyncio.create_task(asyncio.to_thread(csv_manager.process_payload, payload))
     except Exception as e:
         print("Failed to schedule ingestion:", e)
 
