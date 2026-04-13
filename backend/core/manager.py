@@ -1,6 +1,7 @@
 import os
 import csv
 import time
+import re
 import threading
 from pathlib import Path
 from dotenv import load_dotenv
@@ -42,7 +43,25 @@ CSV_HEADERS = [
     "yaw",
     "latitude",
     "longitude",
-    "battery",
+    "batterie",
+    "phase",
+]
+
+SUPABASE_TABLE = "telemetrie"
+SUPABASE_INSERT_COLUMNS = [
+    "flight_id",
+    "timestamp_ms",
+    "altitude",
+    "vitesse",
+    "ax",
+    "ay",
+    "az",
+    "roll",
+    "pitch",
+    "yaw",
+    "latitude",
+    "longitude",
+    "batterie",
     "phase",
 ]
 
@@ -50,6 +69,7 @@ CSV_HEADERS = [
 _lock = threading.Lock()
 _stop_event = None
 _thread = None
+_disabled_supabase_columns = set()
 
 
 def _ensure_csv_header():
@@ -106,7 +126,7 @@ def process_payload(payload: dict) -> bool:
             payload.get("yaw", 0),
             payload.get("latitude", 0),
             payload.get("longitude", 0),
-            payload.get("battery", 0),
+            payload.get("batterie", 0),
             payload.get("phase", ""),
         ]
 
@@ -155,14 +175,120 @@ def _rows_to_payloads(rows):
                 "yaw": float(r.get("yaw", 0)),
                 "latitude": float(r.get("latitude", 0)),
                 "longitude": float(r.get("longitude", 0)),
-                # Normalize CSV 'battery' column to payload key 'battery'
-                "battery": float(r.get("battery", 0)),
+                # Normalize CSV 'batterie' column to payload key 'batterie'
+                "batterie": float(r.get("batterie", 0)),
                 "phase": r.get("phase", ""),
             }
             payloads.append(payload)
         except Exception as e:
             print("Skipped row due to parse error:", e)
     return payloads
+
+
+def _extract_missing_column(exc: Exception) -> str | None:
+    """Extract a missing-column name from a PostgREST schema-cache error."""
+    text = str(exc)
+    match = re.search(r"Could not find the '([^']+)' column", text)
+    if match:
+        return match.group(1)
+    return None
+
+
+def _is_bigint_syntax_error(exc: Exception) -> bool:
+    text = str(exc)
+    return "invalid input syntax for type bigint" in text
+
+
+def _disable_bigint_candidate_columns(batch) -> bool:
+    """Disable likely bigint columns that are receiving decimal values.
+
+    Without schema introspection, prefer dropping lower-priority optional numeric
+    fields until the insert succeeds instead of blocking the whole CSV pusher.
+    """
+    candidate_order = [
+        "batterie",
+        "battery",
+        "latitude",
+        "longitude",
+        "yaw",
+        "pitch",
+        "roll",
+        "az",
+        "ay",
+        "ax",
+        "vitesse",
+        "altitude",
+    ]
+
+    for column in candidate_order:
+        if column in _disabled_supabase_columns:
+            continue
+
+        has_numeric_value = False
+        for item in batch:
+            value = item.get(column)
+            if value is None or value == "":
+                continue
+            try:
+                float(value)
+                has_numeric_value = True
+                break
+            except Exception:
+                continue
+
+        if has_numeric_value:
+            _disabled_supabase_columns.add(column)
+            print(
+                f"Supabase column '{column}' appears incompatible with numeric payloads, "
+                "disabling it for future inserts."
+            )
+            return True
+
+    return False
+
+
+def _sanitize_batch(batch):
+    allowed_columns = [c for c in SUPABASE_INSERT_COLUMNS if c not in _disabled_supabase_columns]
+    sanitized = []
+
+    for item in batch:
+        s = {}
+        if "flight_id" in allowed_columns:
+            s["flight_id"] = str(item.get("flight_id") or "CSV_IMPORT")
+        if "timestamp_ms" in allowed_columns:
+            try:
+                ts_val = item.get("timestamp_ms", 0)
+                s["timestamp_ms"] = int(float(ts_val))
+            except Exception:
+                s["timestamp_ms"] = 0
+
+        numeric_columns = (
+            "altitude",
+            "vitesse",
+            "ax",
+            "ay",
+            "az",
+            "roll",
+            "pitch",
+            "yaw",
+            "latitude",
+            "longitude",
+            "batterie",
+        )
+        for key in numeric_columns:
+            if key not in allowed_columns:
+                continue
+            try:
+                s[key] = float(item.get(key, 0) or 0)
+            except Exception:
+                s[key] = 0.0
+
+        if "phase" in allowed_columns:
+            s["phase"] = str(item.get("phase") or "")
+
+        sanitized.append(s)
+
+    return sanitized
 
 
 def _push_to_supabase(payloads) -> bool:
@@ -172,35 +298,26 @@ def _push_to_supabase(payloads) -> bool:
         BATCH = 100
         for i in range(0, len(payloads), BATCH):
             batch = payloads[i : i + BATCH]
-            # Sanitize types to avoid Postgres type errors (e.g. bigint expecting integer)
-            sanitized = []
-            for item in batch:
-                s = {}
-                # flight_id
-                s["flight_id"] = str(item.get("flight_id") or "CSV_IMPORT")
-                # timestamp_ms -> ensure integer
+            while True:
+                sanitized = _sanitize_batch(batch)
                 try:
-                    ts_val = item.get("timestamp_ms", 0)
-                    s["timestamp_ms"] = int(float(ts_val))
-                except Exception:
-                    s["timestamp_ms"] = 0
-                # numeric fields (float)
-                for k in ("altitude", "vitesse", "ax", "ay", "az", "roll", "pitch", "yaw", "latitude", "longitude", "battery"):
-                    try:
-                        s[k] = float(item.get(k, 0) or 0)
-                    except Exception:
-                        s[k] = 0.0
-                # phase
-                s["phase"] = str(item.get("phase") or "")
+                    supabase.table(SUPABASE_TABLE).insert(sanitized).execute()
+                    break
+                except Exception as e:
+                    missing_column = _extract_missing_column(e)
+                    if missing_column and missing_column not in _disabled_supabase_columns:
+                        _disabled_supabase_columns.add(missing_column)
+                        print(
+                            f"Supabase column '{missing_column}' not found in '{SUPABASE_TABLE}', "
+                            "disabling it for future inserts."
+                        )
+                        continue
+                    if _is_bigint_syntax_error(e) and _disable_bigint_candidate_columns(batch):
+                        continue
 
-                sanitized.append(s)
-
-            try:
-                supabase.table("telemetrie").insert(sanitized).execute()
-            except Exception as e:
-                # Log sanitized payload for debugging
-                print("Supabase insert failed for batch (sanitized):", sanitized)
-                raise
+                    # Log sanitized payload for debugging
+                    print("Supabase insert failed for batch (sanitized):", sanitized)
+                    raise
         return True
     except Exception as e:
         print("Erreur insertion Supabase:", e)

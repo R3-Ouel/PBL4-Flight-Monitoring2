@@ -91,13 +91,28 @@ def start_telemetry_sender(vehicle, endpoint='http://127.0.0.1:8000/push', inter
     stop_event = threading.Event()
 
     def _sender():
+        # keep previous altitude/timestamps to compute vertical speed/acceleration fallback
+        last_alt = None
+        last_ts = None
+        last_vz = None
         while not stop_event.is_set():
             try:
                 ts_ms = int(time() * 1000)
+                cur_ts = time()
                 try:
                     alt = float(vehicle.location.global_relative_frame.alt)
                 except Exception:
                     alt = 0.0
+                # compute vertical speed (vz) as fallback: m/s
+                vz = None
+                dt = None
+                if last_ts is not None:
+                    dt = cur_ts - last_ts
+                    if dt and dt > 0:
+                        try:
+                            vz = (alt - (last_alt if last_alt is not None else alt)) / dt
+                        except Exception:
+                            vz = None
                 try:
                     speed = float(vehicle.groundspeed) if vehicle.groundspeed is not None else (float(vehicle.airspeed) if vehicle.airspeed is not None else 0.0)
                 except Exception:
@@ -111,9 +126,19 @@ def start_telemetry_sender(vehicle, endpoint='http://127.0.0.1:8000/push', inter
                     roll = pitch = yaw = 0.0
                 try:
                     raw = vehicle.raw_imu
-                    ax = getattr(raw, 'xacc', 0) / 1000.0
-                    ay = getattr(raw, 'yacc', 0) / 1000.0
-                    az = getattr(raw, 'zacc', 0) / 1000.0
+                    raw_x = getattr(raw, 'xacc', None)
+                    raw_y = getattr(raw, 'yacc', None)
+                    raw_z = getattr(raw, 'zacc', None)
+                    ax = (raw_x / 1000.0) if raw_x is not None else 0.0
+                    ay = (raw_y / 1000.0) if raw_y is not None else 0.0
+                    # prefer IMU zacc when available, otherwise estimate from vz derivative
+                    if raw_z is not None:
+                        az = raw_z / 1000.0
+                    else:
+                        if last_vz is not None and vz is not None and dt and dt > 0:
+                            az = (vz - last_vz) / dt
+                        else:
+                            az = 0.0
                 except Exception:
                     ax = ay = az = 0.0
 
@@ -132,11 +157,21 @@ def start_telemetry_sender(vehicle, endpoint='http://127.0.0.1:8000/push', inter
                     # New fields
                     'latitude': float(getattr(vehicle.location.global_relative_frame, 'lat', 0) or 0),
                     'longitude': float(getattr(vehicle.location.global_relative_frame, 'lon', 0) or 0),
+                    # expose battery using English key for backend compatibility; keep French key for backwards compatibility
                     'battery': float(getattr(vehicle, 'battery', {}).level if getattr(vehicle, 'battery', None) and getattr(vehicle.battery, 'level', None) is not None else 0),
+                    'batterie': float(getattr(vehicle, 'battery', {}).level if getattr(vehicle, 'battery', None) and getattr(vehicle.battery, 'level', None) is not None else 0),
                 }
 
                 try:
                     requests.post(endpoint, json=payload, timeout=1)
+                except Exception:
+                    pass
+                # update last values for next iteration
+                try:
+                    last_alt = alt
+                    last_ts = cur_ts
+                    if vz is not None:
+                        last_vz = vz
                 except Exception:
                     pass
             except Exception:
@@ -242,6 +277,35 @@ def afficher_distance_et_temps(vehicle, target_coords: tuple, speed: int):
         pass
 
 
+def wait_until_landed(vehicle, timeout: int = 300, alt_threshold: float = 0.5) -> bool:
+    """Bloque jusqu'à l'atterrissage (altitude < alt_threshold et désarmé) ou timeout.
+    Retourne True si atterri, False si timeout.
+    """
+    start_t = time()
+    try:
+        while time() - start_t < timeout:
+            try:
+                alt = getattr(vehicle.location.global_relative_frame, 'alt', None)
+                armed = getattr(vehicle, 'armed', False)
+                if alt is not None:
+                    print(f"Attente atterrissage... alt={alt:.2f} m, armed={armed}")
+                    if alt <= alt_threshold and not armed:
+                        print("Atterrissage détecté - drone posé et désarmé.")
+                        return True
+                else:
+                    print(f"Attente atterrissage... armed={armed}")
+                    if not armed:
+                        print("Drone désarmé.")
+                        return True
+            except Exception as e:
+                print("Erreur pendant attente atterrissage:", e)
+            sleep(1)
+    except Exception:
+        pass
+    print("Timeout waiting for landing.")
+    return False
+
+
 def main():
     # Mode par défaut: lancer SITL et exécuter une mission automatique
     use_connect = len(sys.argv) > 1 and sys.argv[1] in ('connect', 'external')
@@ -270,13 +334,23 @@ def main():
         try:
             if 'vehicle' in locals() and vehicle:
                 try:
+                    # Demander l'atterrissage puis attendre qu'il soit effectivement terminé
                     vehicle.mode = forcer_mode(vehicle, 'LAND')
                 except Exception:
                     pass
-                sleep(1)
+
+                # Attendre l'atterrissage (altitude faible + désarmé) avant d'arrêter la télémétrie
+                try:
+                    wait_until_landed(vehicle, timeout=300, alt_threshold=0.5)
+                except Exception:
+                    pass
+
+                # Stop telemetry sender only after landing
                 if stop_event:
                     stop_event.set()
+
                 if sitl:
+                    # fermer proprement (fermer véhicule + arrêter sitl)
                     fermer_sitl_propre2(vehicle, sitl)
                 else:
                     try:

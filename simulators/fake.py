@@ -14,7 +14,7 @@ CSV_FILE = os.path.join(HERE, "log_simulation.csv")
 HEADERS = [
     "timestamp", "altitude", "vitesse", "ax", "ay", "az",
     "roll", "pitch", "yaw", "temperature", "pression",
-    "latitude", "longitude", "battery", "phase"
+    "latitude", "longitude", "batterie", "phase"
 ]
 
 if not os.path.exists(CSV_FILE):
@@ -38,7 +38,7 @@ def run_simulation():
         elapsed = time.time() - start_time
 
         # Phases
-        if elapsed < 10:
+        if elapsed < 10 and alt < 15:
             phase = "DECOLLAGE"
             alt += 0.5 + random.uniform(-0.1, 0.1)
             vitesse = 2.0 + random.uniform(0, 0.5)
@@ -78,7 +78,7 @@ def run_simulation():
             "yaw": round(yaw, 2),
             "phase": phase,
             # Nouveaux champs demandés
-            "battery": round(batterie, 1),
+            "batterie": round(batterie, 1),
             "latitude": round(lat, 6),
             "longitude": round(lon, 6),
             # gardons quelques champs utiles
