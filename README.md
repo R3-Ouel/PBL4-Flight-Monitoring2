@@ -1,65 +1,96 @@
-# ✈️ PBL 4 : Mécanique du Vol - Système de Monitoring (Go Phase)
+# PBL 4 — Monitoring de télémétrie de vol (Go Phase)
 
-Bienvenue dans le dépôt principal du projet **PBL 4 : Mécanique du Vol** (Forces mises en jeu lors du déplacement d'un avion).
+Ce dépôt contient le code source développé pour la phase "Go" du projet PBL 4. Il permet de générer (simulateurs), collecter (backend) et visualiser (frontend) des données de télémétrie d'un vol réel ou simulé.
 
-Ce dossier `02_Coding` contient l'ensemble du code source développé lors de la **Go Phase**. Il vise à acquérir, traiter, et visualiser les données de télémétrie d'un vol (réel ou simulé). L'objectif est de permettre à n'importe quel collaborateur ou curieux de comprendre les forces qui s'appliquent sur un avion en vol grâce à une interface de monitoring de données.
+Principaux dossiers :
 
----
+- `backend/` : serveur FastAPI qui reçoit la télémétrie, l'écrit en CSV et la pousse vers Supabase (optionnel).
+- `frontend/` : application Flutter affichant le tableau de bord et consommant les données via WebSocket.
+- `simulators/` : simulateurs (fake, mission_planner) qui postent des paquets JSON vers le backend.
+- `scripts/` : scripts utilitaires pour démarrer les simulateurs et le backend sous Windows.
 
-## 🏗️ Architecture du Projet
+## Démarrage rapide
 
-Le projet a été pensé de manière modulaire afin que chacun puisse travailler sur sa partie sans gêner les autres :
+Prérequis :
 
-1. **[`hardware/`](./hardware/)** : Contient les scripts pour la récupération des données. Vous y trouverez un simulateur de vol (`simulator.py`) ainsi que le lien avec des capteurs physiques (`serial_data.py`).
-2. **[`core/`](./core/)** : C'est le "cerveau" de l'application. On y gère la connexion à la base de données (Supabase) et les calculs analytiques (mathématiques du vol, traitement des données).
-3. **[`ui/`](./ui/)** : L'interface utilisateur (Dashboard). C'est ici que l'on construit les tableaux de bord interactifs (avec Streamlit ou Flet) pour visualiser les données en temps réel.
+- Python 3.8+ (idéalement 3.9), `pip` et `virtualenv` pour `backend/` et `simulators/`.
+- Flutter SDK pour l'application `frontend/` (voir https://docs.flutter.dev/get-started/install).
 
----
+Étapes minimales :
 
-## 🚀 Guide de Démarrage (Pour les collaborateurs)
+1. Installer les dépendances backend :
 
-Que vous soyez un développeur expérimenté ou un amateur curieux, voici comment lancer le projet chez vous :
+   Windows (depuis la racine du projet) :
 
-### 1. Prérequis
-Assurez-vous d'avoir [Python 3](https://www.python.org/downloads/) installé sur votre machine.
-
-### 2. Installation des dépendances
-Ouvrez un terminal dans ce dossier `02_Coding` et installez les bibliothèques nécessaires :
-```bash
-# S'il y a un environnement virtuel, activez-le d'abord (ex: venv\Scripts\activate sur Windows)
-pip install -r requirements.txt
-```
-
-### 3. Configuration de la base de données (Supabase)
-Pour que les scripts puissent communiquer avec la base de données :
-1. Créez un fichier `.env` à la racine du dossier `02_Coding` (un modèle ou fichier vide s'y trouve peut-être déjà).
-2. Ajoutez-y vos clés API Supabase :
-   ```env
-   SUPABASE_URL=votre_url_supabase
-   SUPABASE_KEY=votre_cle_api_supabase
+   ```powershell
+   cd backend
+   python -m venv venv
+   .\venv\Scripts\activate
+   pip install -r requirements.txt
    ```
 
-### 4. Lancer une simulation
-Pour générer des données de vol virtuelles :
-```bash
-python hardware/simulator.py
+2. Installer les dépendances des simulateurs :
+
+   ```powershell
+   cd simulators
+   python -m venv venv
+   .\venv\Scripts\activate
+   pip install -r requirements.txt
+   ```
+
+3. (Frontend) Récupérer les packages Flutter :
+
+   ```bash
+   cd frontend
+   flutter pub get
+   flutter run
+   ```
+
+4. Configurer Supabase (optionnel) : créer `.env` à la racine et définir `SUPABASE_URL` et `SUPABASE_KEY`.
+
+5. Lancer le backend :
+
+   - Windows : `scripts\run_backend.bat` (ouvre le serveur et démarre le pusher CSV en tâche de fond)
+   - Ou depuis `backend/` : `uvicorn main:app --reload --host 127.0.0.1 --port 8000`
+
+6. Lancer un simulateur :
+
+   - Utilisez `scripts\run_simulators.bat` et choisissez `1` (Fake) ou `2` (Mission Planner) ou `3` (Both),
+     ou lancez directement `python simulators\mission_planner.py`.
+
+## Points d'intégration
+
+- Endpoint HTTP pour recevoir la télémétrie : `POST http://127.0.0.1:8000/push`
+- WebSocket (diffusion vers frontend) : `ws://127.0.0.1:8000/ws/flight-data`
+- Fichier CSV local : `backend/data/flight_data.csv` (écriture par le backend)
+- Si Supabase est configuré, les lignes CSV sont poussées vers la table `telemetrie`.
+
+Champs JSON attendus (exemples) :
+
+```json
+{
+  "flight_id": "SITL_MISSION",
+  "timestamp_ms": 1670000000000,
+  "altitude": 12.3,
+  "vitesse": 4.2,
+  "ax": 0.12,
+  "ay": -0.03,
+  "az": 0.01,
+  "roll": 1.2,
+  "pitch": 0.5,
+  "yaw": 90,
+  "latitude": 12.3456,
+  "longitude": 56.7890,
+  "batterie": 87,
+  "phase": "GUIDED"
+}
 ```
-*Le terminal vous affichera les informations envoyées (altitude, vitesse, inclinaison, etc.).*
 
-### 5. Lancer l'interface utilisateur
-Pour voir le tableau de bord (selon le framework que vous avez choisi d'utiliser) :
-```bash
-streamlit run ui/app_streamlit.py
-# ou
-python ui/app_flet.py
-```
+## Documentation détaillée
 
----
+- Backend : [backend/README.md](backend/README.md)
+- Frontend : [frontend/README.md](frontend/README.md)
+- Simulateurs : [simulators/README.md](simulators/README.md)
+- Scripts utilitaires : [scripts/README.md](scripts/README.md)
 
-## 🤝 Comment Contribuer ?
-
-- **Amateurs d'électronique** : Allez dans le dossier `hardware/` pour améliorer le code de récupération des capteurs Arduino/ESP32.
-- **Mathématiciens et Data Scientists** : Allez dans le dossier `core/` pour injecter vos formules de mécanique du vol (portance, traînée, poids, poussée) dans `analytics.py`.
-- **Designers & Développeurs Frontend** : Allez dans `ui/` pour rendre le tableau de bord encore plus lisible et agréable !
-
-*(Pour plus de détails, n'hésitez pas à lire les `README.md` présents dans chaque sous-dossier.)*
+Si vous avez besoin d'aide pour exécuter le projet sur votre machine, dites-moi quel OS et je vous fournis les commandes pas-à-pas.
