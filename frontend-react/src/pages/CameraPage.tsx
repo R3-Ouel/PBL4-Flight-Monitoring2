@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { NeonCard } from '../components/ui/NeonCard'
 import { useThemeColors } from '../hooks/useThemeColors'
 import { useCameraCapture } from '../hooks/useCameraCapture'
@@ -75,12 +75,38 @@ function LiveBadge() {
   )
 }
 
+const RASPBERRY_URL = "http://192.168.137.66:8000"
+
 export function CameraPage() {
   const c = useThemeColors()
   const { photos, capturePhoto, clearAll } = useCameraCapture()
   const [recording, setRecording] = useState(false)
+  
+  // Nouvel état : null = pas connecté, string = connecté
+  const [streamUrl, setStreamUrl] = useState<string | null>(null)
 
-  const streamUrl: string | null = null
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval>
+
+    async function testerConnexion() {
+      try {
+        // On appelle un endpoint léger "/ping" pour vérifier que le serveur répond
+        const res = await fetch(`${RASPBERRY_URL}/ping`, { signal: AbortSignal.timeout(2000) })
+        if (res.ok) {
+          setStreamUrl(`${RASPBERRY_URL}/video`)  // ✅ serveur dispo → on active le flux
+        } else {
+          setStreamUrl(null)                       // ❌ serveur répond mais erreur
+        }
+      } catch {
+        setStreamUrl(null)                         // ❌ serveur injoignable
+      }
+    }
+
+    testerConnexion()                        // test immédiat au chargement
+    interval = setInterval(testerConnexion, 5000)  // re-teste toutes les 5 secondes
+
+    return () => clearInterval(interval)     // nettoyage quand on quitte la page
+  }, [])
 
   const galleryTitle = useMemo(() => `GALERIE (${photos.length})`, [photos.length])
 
@@ -91,6 +117,8 @@ export function CameraPage() {
       return next
     })
   }
+
+
 
   return (
     <div className="flex h-full min-h-[calc(100vh-3.5rem)] flex-col gap-4 p-4 md:p-6">
