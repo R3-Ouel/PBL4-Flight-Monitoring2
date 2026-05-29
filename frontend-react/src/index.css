@@ -1,0 +1,163 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+/* Design tokens — dark (default) */
+:root,
+[data-theme='dark'] {
+  --scaffold-bg: #0d0f14;
+  --card-bg: #13161f;
+  --sidebar-bg: #0a0c12;
+  /* Top bar + camera surfaces */
+  --topbar-bg: #0d0f14;
+  --topbar-border: #1e2130;
+  --surface-deep: #0a0c10;
+  --surface-card: #13161f;
+  --border-default: rgba(255, 255, 255, 0.1);
+  --border-emphasis: rgba(0, 229, 255, 0.35);
+  --text-primary: #ffffff;
+  --text-label: rgba(255, 255, 255, 0.55);
+  --text-muted: rgba(255, 255, 255, 0.4);
+  --accent-red: #ff3c5a;
+  --accent-green: #00ff88;
+  --accent-cyan: #00e5ff;
+  --accent-orange: #ffa657;
+  --accent-pink: #ff3c5a;
+  --accent-blue: #448aff;
+  --nav-inactive: rgba(255, 255, 255, 0.7);
+  --card-shadow: 0 0 12px 1px rgba(255, 60, 90, 0.12);
+  --arm-disarmed-bg: #3d0a0a;
+  --arm-disarmed-border: #ff3c5a;
+  --arm-armed-bg: #0a3d1a;
+  --arm-armed-border: #00ff88;
+  --overlay-bg: rgba(13, 15, 20, 0.75);
+  --map-trail-color: #00e5ff;
+  --status-ok: #00ff88;
+  --status-warn: #ffa657;
+  --status-critical: #ff3c5a;
+  --chip-bg: rgba(19, 22, 31, 0.85);
+  --divider: rgba(255, 255, 255, 0.1);
+  --toggle-track: rgba(255, 255, 255, 0.2);
+  --toggle-thumb: #ffffff;
+  --graph-grid: rgba(255, 255, 255, 0.06);
+  --graph-axis: rgba(255, 255, 255, 0.7);
+  --tooltip-bg: rgba(0, 0, 0, 0.87);
+  --tooltip-text: #ffffff;
+}
+
+[data-theme='light'] {
+  --scaffold-bg: #f0f2f7;
+  --card-bg: #ffffff;
+  --sidebar-bg: #e8ebf2;
+  /* Top bar + camera surfaces */
+  --topbar-bg: #ffffff;
+  --topbar-border: #d0d7e3;
+  --surface-deep: #f0f2f7;
+  --surface-card: #ffffff;
+  --border-default: rgba(26, 26, 46, 0.12);
+  --border-emphasis: rgba(0, 179, 204, 0.45);
+  --text-primary: #1a1a2e;
+  --text-label: #1a1a2e;
+  --text-muted: rgba(26, 26, 46, 0.45);
+  --accent-red: #cc3048;
+  --accent-green: #00b360;
+  --accent-cyan: #00b3cc;
+  --accent-orange: #b3743c;
+  --accent-pink: #cc3048;
+  --accent-blue: #3066cc;
+  --nav-inactive: rgba(26, 26, 46, 0.54);
+  --card-shadow: 0 2px 12px rgba(26, 26, 46, 0.08);
+  --arm-disarmed-bg: #fde8eb;
+  --arm-disarmed-border: #cc3048;
+  --arm-armed-bg: #e6f9ef;
+  --arm-armed-border: #00b360;
+  --overlay-bg: rgba(240, 242, 247, 0.85);
+  --map-trail-color: #00b3cc;
+  --status-ok: #00b360;
+  --status-warn: #b3743c;
+  --status-critical: #cc3048;
+  --chip-bg: rgba(255, 255, 255, 0.92);
+  --divider: rgba(26, 26, 46, 0.12);
+  --toggle-track: rgba(26, 26, 46, 0.15);
+  --toggle-thumb: #ffffff;
+  --graph-grid: rgba(26, 26, 46, 0.08);
+  --graph-axis: #1a1a2e;
+  --tooltip-bg: rgba(255, 255, 255, 0.96);
+  --tooltip-text: #1a1a2e;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  background-color: var(--scaffold-bg);
+  color: var(--text-primary);
+}
+
+.dark-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.dark-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--border-default);
+  border-radius: 4px;
+}
+
+@keyframes pulse-critical {
+  0%,
+  100% {
+    text-shadow: 0 0 4px var(--status-critical);
+  }
+  50% {
+    text-shadow: 0 0 12px var(--status-critical);
+  }
+}
+
+@keyframes pulse-armed {
+  0%,
+  100% {
+    box-shadow: 0 0 6px 0 var(--arm-armed-border);
+  }
+  50% {
+    box-shadow: 0 0 16px 4px var(--arm-armed-border);
+  }
+}
+
+@keyframes pulse-live-dot {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.75;
+  }
+  50% {
+    transform: scale(1.18);
+    opacity: 1;
+  }
+}
+
+.animate-pulse-critical {
+  animation: pulse-critical 1.5s ease-in-out infinite;
+}
+
+.animate-pulse-armed {
+  animation: pulse-armed 2s ease-in-out infinite;
+}
+
+.leaflet-container {
+  background: var(--card-bg);
+  font-family: var(--font-sans);
+}
+
+.leaflet-control-attribution {
+  font-size: 9px !important;
+  background: var(--chip-bg) !important;
+  color: var(--text-muted) !important;
+}

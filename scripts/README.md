@@ -7,6 +7,8 @@ Fichiers importants :
 - `run_simulators.bat` : menu interactif pour démarrer `simulators\fake.py` et/ou `simulators\mission_planner.py` dans des fenêtres séparées (`cmd /k` pour garder la fenêtre ouverte).
 - `run_backend.bat` : démarre le backend (FastAPI) dans une fenêtre.
 - `run_all.bat` : script utilitaire pour démarrer plusieurs composants en séquence (voir le contenu pour détails).
+- `run_frontend_react.bat` : démarre le frontend React (Vite) dans `frontend-react/`.
+- `run_all_react.bat` : démarre le frontend React puis le backend.
 - `setup.bat` : script d'installation/initialisation (peut créer des environnements ou installer des dépendances selon projet).
 - `kill_simulators.ps1` : utilitaire PowerShell pour tuer les processus de simulateur (optionnel). Note : l'appel automatique est désactivé dans `run_simulators.bat` pour éviter des problèmes d'interprétation.
 
